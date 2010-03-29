@@ -17,6 +17,7 @@ default_tz = pytz.timezone(getattr(settings, "TIME_ZONE", "UTC"))
 class TimeZoneField(models.CharField):
     
     __metaclass__ = models.SubfieldBase
+    _south_introspects = True
     
     def __init__(self, *args, **kwargs):
         validate_timezone_max_length(MAX_TIMEZONE_LENGTH, zones.ALL_TIMEZONE_CHOICES)
