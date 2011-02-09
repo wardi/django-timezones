@@ -11,3 +11,6 @@ PRETTY_TIMEZONE_CHOICES = []
 for tz in pytz.common_timezones:
     now = datetime.now(pytz.timezone(tz))
     PRETTY_TIMEZONE_CHOICES.append((tz, "(GMT%s) %s" % (now.strftime("%z"), tz)))
+
+ORDERED_TIMEZONE_CHOICES = sorted(PRETTY_TIMEZONE_CHOICES, key=
+    lambda c: (int(c[1][4:].split(')')[0]), c[0]))
