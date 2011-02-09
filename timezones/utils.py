@@ -1,8 +1,10 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.encoding import smart_str
+from django.contrib.gis.geos import Point
 
 import pytz
+import re
 
 
 def localtime_for_timezone(value, timezone):
@@ -39,3 +41,46 @@ def validate_timezone_max_length(max_length, zones):
         return x and (len(y) <= max_length)
     if not reduce(reducer, zones, True):
         raise Exception("timezones.fields.TimeZoneField MAX_TIMEZONE_LENGTH is too small")
+
+
+# for reading coordinates out of zone.tab
+COORDINATES_RE = re.compile(r"""^
+    (?P<lat_sign>[+-])
+    (?P<lat_degrees>\d\d)
+    (?P<lat_minutes>\d\d)
+    (?P<lat_seconds>\d\d)?
+    (?P<lng_sign>[+-])
+    (?P<lng_degrees>\d\d\d)
+    (?P<lng_minutes>\d\d)
+    (?P<lng_seconds>\d\d)?
+    $""", re.VERBOSE)
+WGS84_SRID = 4326
+_coordinates = None # saved coordinates
+def _dms_to_point(coordinates):
+    m = COORDINATES_RE.match(coordinates)
+    lat = (int(m.group('lat_degrees')) +
+        (int(m.group('lat_minutes')) * 60 +
+            int(m.group('lat_seconds') or 0)) / 3600.0)
+    if m.group('lat_sign') == '-':
+        lat = -lat
+    lng = (int(m.group('lng_degrees')) +
+        (int(m.group('lng_minutes')) * 60 +
+            int(m.group('lng_seconds') or 0)) / 3600.0)
+    if m.group('lng_sign') == '-':
+        lng = -lng
+    return Point(lng, lat, srid=WGS84_SRID)
+
+def get_timezone_coordinates(timezone):
+    global _coordinates
+    if not _coordinates:
+        _coordinates = {}
+        zone_tab = pytz.open_resource('zone.tab')
+        for line in zone_tab.readlines():
+            if line.startswith('#'):
+                continue
+            code, coordinates, zone = line.split(None, 4)[:3]
+            _coordinates[zone] = _dms_to_point(coordinates)
+    if hasattr(timezone, 'zone'):
+        return _coordinates.get(timezone.zone)
+    return _coordinates.get(timezone)
+
