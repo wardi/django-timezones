@@ -12,7 +12,7 @@ def localtime_for_timezone(value, timezone):
     Given a ``datetime.datetime`` object in UTC and a timezone represented as
     a string, return the localized time for the timezone.
     """
-    return adjust_datetime_to_timezone(value, settings.TIME_ZONE, timezone)
+    return adjust_datetime_to_timezone(value, 'UTC', timezone)
 
 
 def adjust_datetime_to_timezone(value, from_tz, to_tz=None):
